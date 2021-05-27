@@ -1,36 +1,35 @@
 package karmanchuk.bouncing.ui.view;
 
 import javafx.geometry.Insets;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import karmanchik.clientservice.entity.Agent;
-import karmanchik.clientservice.entity.ProductSale;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.math.BigDecimal;
-import java.util.List;
 
-public class AgentView extends Button {
+public class AgentView extends HBox {
     private final Agent agent;
+    private final Integer percent;
+    private final Integer average;
 
     public AgentView(Agent agent) {
         this.agent = agent;
+        this.percent = agent.getPercent();
+        this.average = agent.getAverageSaleCount();
     }
 
     public AgentView build() throws FileNotFoundException {
-        HBox hBox = new HBox();
-        hBox.setPrefWidth(1200);
-        hBox.setPrefHeight(200);
-        hBox.setPadding(new Insets(10));
+        this.setPrefWidth(1200);
+        this.setPrefHeight(200);
+        this.setPadding(new Insets(10));
 
         ImageView iv = new ImageView();
-        iv.setFitWidth(200);
-        iv.setFitHeight(200);
+        iv.setFitWidth(100);
+        iv.setFitHeight(100);
         if (agent.getLogo() != null) {
             iv.setImage(new Image(new FileInputStream("img" + agent.getLogo())));
         }
@@ -41,17 +40,29 @@ public class AgentView extends Button {
 
         Label lb3 = new Label(agent.getPhone());
 
-        Label lb4 = new Label(agent.getPercent() + "%");
+        Label lb4 = new Label(getPercent() + "%");
+        Label lb5 = new Label(getAverage() + " продаж за год");
 
-        VBox vBox = new VBox(lb1, lb3, lb2);
+        VBox vBox = new VBox(lb1, lb5, lb3, lb2);
         vBox.setPadding(new Insets(10));
         vBox.setPrefWidth(800);
-        hBox.getChildren().addAll(
+        this.getChildren().addAll(
                 iv,
                 vBox,
                 lb4
         );
-        this.setGraphic(hBox);
         return this;
+    }
+
+    public Agent getAgent() {
+        return agent;
+    }
+
+    public Integer getPercent() {
+        return percent;
+    }
+
+    public Integer getAverage() {
+        return average;
     }
 }

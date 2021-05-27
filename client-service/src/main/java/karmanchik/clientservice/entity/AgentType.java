@@ -1,6 +1,5 @@
 package karmanchik.clientservice.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +9,6 @@ import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.util.List;
-import java.util.Objects;
 
 @Data
 @Entity
@@ -22,7 +20,6 @@ public class AgentType extends AbstractEntity {
     private String title;
     private String image;
 
-    @JsonBackReference
     @OneToMany(mappedBy = "type")
     private List<Agent> agents;
 
@@ -32,10 +29,6 @@ public class AgentType extends AbstractEntity {
 
     @Override
     public String toString() {
-        return "AgentType{" +
-                "id=" + id +
-                ", title='" + title + '\'' +
-                ", image='" + image + '\'' +
-                '}';
+        return title;
     }
 }

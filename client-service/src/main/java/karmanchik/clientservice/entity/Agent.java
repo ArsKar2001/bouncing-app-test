@@ -11,7 +11,11 @@ import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.time.Year;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Data
 @Entity
@@ -30,9 +34,7 @@ public class Agent extends AbstractEntity {
     private String logo;
     private Integer priority;
 
-    @JsonManagedReference
     @ManyToOne(cascade = CascadeType.ALL)
-    @LazyCollection(LazyCollectionOption.TRUE)
     @JoinColumn(name = "AGENTTYPEID")
     private AgentType type;
 
@@ -55,15 +57,20 @@ public class Agent extends AbstractEntity {
 
     }
 
-    public Integer getPercent() {
-        int sumProductCount = sales.stream()
-                .map(ProductSale::getProductCount)
-                .mapToInt(Integer::intValue).sum();
-        int sumCost = sales.stream()
-                .map(sale -> sale.getProduct().getMinCostForAgent())
+    public Integer getAverageSaleCount() {
+        return (int) sales.stream()
+                .map(sale -> sale.getSaleDate().getYear())
                 .distinct()
-                .mapToInt(BigDecimal::intValue).sum();
-        int sum = sumProductCount * sumCost;
+                .mapToInt(year -> sales.stream()
+                        .filter(sale -> sale.getSaleDate().getYear() == year)
+                        .mapToInt(ProductSale::getProductCount).sum()).average()
+                .orElse(0);
+    }
+
+    public Integer getPercent() {
+        int sum = sales.stream()
+                .mapToInt(value -> value.getProduct().getMinCostForAgent().intValue() * value.getProductCount())
+                .sum();
         return (sum >= 10_000 ?
                 sum >= 50_000 ?
                         sum >= 150_000 ?

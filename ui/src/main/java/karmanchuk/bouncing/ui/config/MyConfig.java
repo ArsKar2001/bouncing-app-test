@@ -7,4 +7,5 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import(value = {DataSourceConfig.class})
 public class MyConfig {
+
 }

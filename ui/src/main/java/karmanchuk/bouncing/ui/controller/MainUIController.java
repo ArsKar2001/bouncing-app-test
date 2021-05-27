@@ -1,103 +1,93 @@
 package karmanchuk.bouncing.ui.controller;
 
+import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
 import karmanchik.clientservice.entity.Agent;
+import karmanchik.clientservice.entity.AgentType;
 import karmanchik.clientservice.jpa.AgentPagingRepository;
+import karmanchik.clientservice.jpa.AgentTypeRepository;
 import karmanchuk.bouncing.ui.models.SortType;
 import karmanchuk.bouncing.ui.view.AgentView;
+import karmanchuk.bouncing.ui.view.PageAgentsView;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
 
 import java.io.FileNotFoundException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
-@Component
+@Controller
 @RequiredArgsConstructor
 public class MainUIController extends AbstractUIController {
     private static final Integer PAGE_SIZE = 10;
 
-    private final AgentPagingRepository agentPagingRepository;
+    private final ListView<AgentView> agentViews = new ListView<>();
 
-    private static Integer TOTAL_PAGE_SIZE = 0;
-    private static Integer PAGE_NUMBER = 0;
-    private static Sort sort = Sort.unsorted();
+    private final AgentPagingRepository agentRepository;
+    private final AgentTypeRepository agentTypeRepository;
 
+    public Pagination pgContainer;
+    public ComboBox<AgentType> cbFilter;
+    public ComboBox<String> cbSort;
     public TextField tfSearch;
-    public ComboBox<SortType> cbSort;
-    public ComboBox<String> cbFilter;
-    public Button btnBackPage;
-    public Label lbPages;
-    public Button btnUpPage;
-    public VBox vbAgents;
 
     @Override
     protected void postShow() {
-        updatePages(agentPagingRepository.findAll(PageRequest.of(PAGE_NUMBER, PAGE_SIZE, sort)));
-    }
-
-    private void loadAgents(List<Agent> content) {
-        vbAgents.getChildren().clear();
-        content.stream()
-                .map(agent -> {
-                    try {
-                        return new AgentView(agent).build();
-                    } catch (FileNotFoundException e) {
-                        new Alert(Alert.AlertType.ERROR, e.getMessage(), ButtonType.OK).showAndWait();
-                        throw new RuntimeException(e);
-                    }
-                })
-                .forEach(av -> vbAgents.getChildren().add(av));
-        int number = PAGE_NUMBER + 1;
-        lbPages.setText(number + " / " + TOTAL_PAGE_SIZE);
+        cbFilter.getItems().addAll(agentTypeRepository.findAll());
+        loadAgents(agentRepository.findAll());
     }
 
     @Override
     protected void preShow() {
+
     }
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        btnUpPage.setOnAction(e -> {
-            if (PAGE_NUMBER < TOTAL_PAGE_SIZE - 1) {
-                PAGE_NUMBER++;
-                updatePages(agentPagingRepository.findAll(PageRequest.of(PAGE_NUMBER, PAGE_SIZE, sort)));
+        cbFilter.setOnAction(e -> searchAgent(tfSearch.getText(), cbFilter.getValue()));
+        tfSearch.textProperty().addListener((observableValue, s, t1) -> {
+            if (!t1.isEmpty()) {
+                searchAgent(t1, cbFilter.getValue());
+            } else {
+                postShow();
             }
-        });
-        btnBackPage.setOnAction(e -> {
-            if (PAGE_NUMBER > 0) {
-                PAGE_NUMBER--;
-                updatePages(agentPagingRepository.findAll(PageRequest.of(PAGE_NUMBER, PAGE_SIZE, sort)));
-            }
-        });
-
-        cbSort.getItems().addAll(SortType.values());
-
-        cbSort.setOnAction(e -> {
-            switch (cbSort.getValue()) {
-                case NONE:
-                    sort = Sort.unsorted();
-                    break;
-                case ASK:
-                    sort = Sort.by("title", "priority").ascending();
-                    break;
-                case DESK:
-                    sort = Sort.by("title", "priority").descending();
-                    break;
-            }
-            PAGE_NUMBER = 0;
-            updatePages(agentPagingRepository.findAll(PageRequest.of(PAGE_NUMBER, PAGE_SIZE, sort)));
         });
     }
 
-    private void updatePages(Page<Agent> page) {
-        TOTAL_PAGE_SIZE = page.getTotalPages();
-        loadAgents(page.getContent());
+    private void loadAgents(List<Agent> agents) {
+        agentViews.getItems().clear();
+        int pageSize = agents.size() < PAGE_SIZE ? agents.size() : PAGE_SIZE;
+        pgContainer.setPageCount(agents.size() / pageSize);
+        pgContainer.setPageFactory(pageIndex -> {
+            try {
+                ListView<AgentView> view = new PageAgentsView(agents, pageIndex, pageSize).build();
+                agentViews.getItems()
+                        .addAll(view.getItems());
+                return view;
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void searchAgent(String text, AgentType type) {
+        String s = text.toLowerCase();
+        if (!agentViews.getItems().isEmpty()) {
+            List<Agent> agents = agentViews.getItems().stream()
+                    .map(AgentView::getAgent)
+                    .filter(agent -> {
+                        if (type == null) {
+                            return true;
+                        }
+                        return agent.getType() == type;
+                    })
+                    .sorted(Comparator.comparing(Agent::getTitle))
+                    .collect(Collectors.toList());
+            loadAgents(agents);
+        }
     }
 }
